@@ -101,7 +101,7 @@ const getEnv = (name: string, defaultVal?: string): string | undefined =>
 
 // Custom help
 program
-  .name('vckit-db')
+  .name('vckit-db-tools')
   .description('Database management tools for VCKit')
   .version(pkg.version)
   .option('--dotenv <path>', 'Load environment variables from file')
@@ -125,7 +125,7 @@ program
     'after',
     `
 ${colors.cyan('Example:')}
-  $ vckit-db generate-key
+  $ vckit-db-tools generate-key
 `
   )
   .action(() => {
@@ -156,8 +156,8 @@ program
     'after',
     `
 ${colors.cyan('Examples:')}
-  $ vckit-db generate-password
-  $ vckit-db generate-password --length 32
+  $ vckit-db-tools generate-password
+  $ vckit-db-tools generate-password --length 32
 `
   )
   .action((options) => {
@@ -194,9 +194,9 @@ program
     'after',
     `
 ${colors.cyan('Examples:')}
-  $ vckit-db rotate-key --old-key abc123... --new-key def456...
-  $ vckit-db rotate-key --old-key $OLD_KEY --new-key $NEW_KEY --dotenv .env
-  $ vckit-db rotate-key --old-key $OLD_KEY --new-key $NEW_KEY --dotenv .env --update-env
+  $ vckit-db-tools rotate-key --old-key abc123... --new-key def456...
+  $ vckit-db-tools rotate-key --old-key $OLD_KEY --new-key $NEW_KEY --dotenv .env
+  $ vckit-db-tools rotate-key --old-key $OLD_KEY --new-key $NEW_KEY --dotenv .env --update-env
 `
   )
   .action(async (options) => {
@@ -268,9 +268,9 @@ program
     'after',
     `
 ${colors.cyan('Examples:')}
-  $ vckit-db backup --output ./backup.sql --password mypass
-  $ vckit-db backup --output ./backup.sql --container vckit-postgres
-  $ vckit-db backup --output ./backup.sql --dotenv .env
+  $ vckit-db-tools backup --output ./backup.sql --password mypass
+  $ vckit-db-tools backup --output ./backup.sql --container vckit-postgres
+  $ vckit-db-tools backup --output ./backup.sql --dotenv .env
 `
   )
   .action(async (options) => {
@@ -313,9 +313,9 @@ program
     'after',
     `
 ${colors.cyan('Examples:')}
-  $ vckit-db restore --input ./backup.sql --password mypass
-  $ vckit-db restore --input ./backup.sql --drop --container vckit-postgres
-  $ vckit-db restore --input ./backup.sql --dotenv .env
+  $ vckit-db-tools restore --input ./backup.sql --password mypass
+  $ vckit-db-tools restore --input ./backup.sql --drop --container vckit-postgres
+  $ vckit-db-tools restore --input ./backup.sql --dotenv .env
 `
   )
   .action(async (options) => {
@@ -357,9 +357,9 @@ program
     'after',
     `
 ${colors.cyan('Examples:')}
-  $ vckit-db verify --password mypass
-  $ vckit-db verify --container vckit-postgres
-  $ vckit-db verify --dotenv .env
+  $ vckit-db-tools verify --password mypass
+  $ vckit-db-tools verify --container vckit-postgres
+  $ vckit-db-tools verify --dotenv .env
 `
   )
   .action(async (options) => {
@@ -407,9 +407,9 @@ program
     'after',
     `
 ${colors.cyan('Examples:')}
-  $ vckit-db change-password --new-password newpass123 --password oldpass
-  $ vckit-db change-password --generate --dotenv .env --update-env
-  $ vckit-db change-password --generate --length 32 --container vckit-postgres
+  $ vckit-db-tools change-password --new-password newpass123 --password oldpass
+  $ vckit-db-tools change-password --generate --dotenv .env --update-env
+  $ vckit-db-tools change-password --generate --length 32 --container vckit-postgres
 `
   )
   .action(async (options) => {
