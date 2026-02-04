@@ -28,13 +28,17 @@ export function isLocalHost(host: string): boolean {
     return true;
   }
 
-  // Check for 127.x.x.x loopback range
-  if (/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) {
+  // Check for 127.x.x.x loopback range (with valid 0-255 octets)
+  // Octet pattern: 0-255 = (25[0-5]|2[0-4]\d|1\d{2}|[1-9]?\d)
+  const octet = '(25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)';
+  const ipv4LoopbackRegex = new RegExp(`^127\\.${octet}\\.${octet}\\.${octet}$`);
+  if (ipv4LoopbackRegex.test(host)) {
     return true;
   }
 
-  // IPv4-mapped IPv6 localhost (::ffff:127.x.x.x)
-  if (/^::ffff:127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/i.test(host)) {
+  // IPv4-mapped IPv6 localhost (::ffff:127.x.x.x with valid octets)
+  const ipv6MappedLoopbackRegex = new RegExp(`^::ffff:127\\.${octet}\\.${octet}\\.${octet}$`, 'i');
+  if (ipv6MappedLoopbackRegex.test(host)) {
     return true;
   }
 

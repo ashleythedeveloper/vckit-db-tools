@@ -78,13 +78,57 @@ describe('isLocalHost', () => {
     });
   });
 
-  describe('should return true for empty/undefined hosts (safe default)', () => {
+  describe('should return true for empty/undefined/null hosts (safe default)', () => {
     it('empty string', () => {
       expect(isLocalHost('')).toBe(true);
     });
 
     it('undefined (cast to string)', () => {
       expect(isLocalHost(undefined as unknown as string)).toBe(true);
+    });
+
+    it('null (cast to string)', () => {
+      expect(isLocalHost(null as unknown as string)).toBe(true);
+    });
+  });
+
+  describe('should not trim whitespace (exact match required)', () => {
+    it('localhost with leading space', () => {
+      expect(isLocalHost(' localhost')).toBe(false);
+    });
+
+    it('localhost with trailing space', () => {
+      expect(isLocalHost('localhost ')).toBe(false);
+    });
+
+    it('localhost with surrounding spaces', () => {
+      expect(isLocalHost(' localhost ')).toBe(false);
+    });
+
+    it('127.0.0.1 with whitespace', () => {
+      expect(isLocalHost(' 127.0.0.1 ')).toBe(false);
+    });
+  });
+
+  describe('should reject invalid IP octets (must be 0-255)', () => {
+    it('127.999.0.1 (invalid second octet)', () => {
+      expect(isLocalHost('127.999.0.1')).toBe(false);
+    });
+
+    it('127.0.256.1 (invalid third octet)', () => {
+      expect(isLocalHost('127.0.256.1')).toBe(false);
+    });
+
+    it('127.0.0.999 (invalid fourth octet)', () => {
+      expect(isLocalHost('127.0.0.999')).toBe(false);
+    });
+
+    it('::ffff:127.0.0.256 (IPv4-mapped with invalid octet)', () => {
+      expect(isLocalHost('::ffff:127.0.0.256')).toBe(false);
+    });
+
+    it('::ffff:127.999.999.999 (IPv4-mapped with all invalid octets)', () => {
+      expect(isLocalHost('::ffff:127.999.999.999')).toBe(false);
     });
   });
 
@@ -149,6 +193,20 @@ describe('buildClientConfig', () => {
     it('should allow database override', () => {
       const result = buildClientConfig(baseDbConfig, 'overridedb');
       expect(result.database).toBe('overridedb');
+    });
+
+    it('should handle missing password (optional field)', () => {
+      const config: DbConfig = {
+        host: 'localhost',
+        port: 5432,
+        database: 'testdb',
+        user: 'testuser',
+        // password intentionally omitted
+      };
+      const result = buildClientConfig(config);
+      expect(result.password).toBeUndefined();
+      expect(result.host).toBe('localhost');
+      expect(result.user).toBe('testuser');
     });
   });
 
