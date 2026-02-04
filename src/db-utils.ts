@@ -3,10 +3,53 @@ import type { DbConfig } from './types';
 
 /**
  * Check if a host is considered local (no SSL needed)
+ * Covers:
+ * - localhost, ::1, and 0:0:0:0:0:0:0:1 (exact matches)
+ * - Full 127.x.x.x IPv4 loopback range (via regex)
+ * - IPv4-mapped IPv6 loopback (::ffff:127.x.x.x)
+ * - Common Docker internal hostnames
+ *
+ * Note: Empty/undefined hosts are treated as local (safe default for
+ * misconfiguration or intentional local-only usage).
  */
 export function isLocalHost(host: string): boolean {
-  const localHosts = ['localhost', '127.0.0.1', '::1'];
-  return localHosts.includes(host.toLowerCase());
+  // Treat undefined/empty as local (safe default - no SSL for missing host)
+  if (!host) return true;
+
+  const lowerHost = host.toLowerCase();
+
+  // Exact localhost names
+  const localHosts = [
+    'localhost',
+    '::1',
+    '0:0:0:0:0:0:0:1', // Long form IPv6 localhost
+  ];
+  if (localHosts.includes(lowerHost)) {
+    return true;
+  }
+
+  // Check for 127.x.x.x loopback range
+  if (/^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) {
+    return true;
+  }
+
+  // IPv4-mapped IPv6 localhost (::ffff:127.x.x.x)
+  if (/^::ffff:127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/i.test(host)) {
+    return true;
+  }
+
+  // Common Docker internal hostnames (typically don't have SSL)
+  const dockerHosts = [
+    'host.docker.internal',
+    'docker.for.mac.localhost',
+    'docker.for.win.localhost',
+    'gateway.docker.internal',
+  ];
+  if (dockerHosts.includes(lowerHost)) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
