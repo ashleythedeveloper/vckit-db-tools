@@ -13,6 +13,7 @@ import {
   spacer,
   divider,
 } from './ui';
+import { buildClientConfig } from './db-utils';
 
 const NONCE_BYTES = 24;
 
@@ -90,7 +91,7 @@ export async function rotateEncryptionKey({
   const oldBox = new SecretBox(oldKey);
   const newBox = new SecretBox(newKey);
 
-  const client = new Client(dbConfig);
+  const client = new Client(buildClientConfig(dbConfig));
 
   try {
     // Connect

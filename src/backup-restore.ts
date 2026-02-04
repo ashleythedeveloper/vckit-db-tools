@@ -22,6 +22,7 @@ import {
   spacer,
   table,
 } from './ui';
+import { buildClientConfig } from './db-utils';
 
 const execAsync = promisify(exec);
 
@@ -211,7 +212,7 @@ export async function backupDatabase({
   const connectSpinner = new Spinner('Establishing connection...');
   connectSpinner.start();
 
-  const client = new Client(dbConfig);
+  const client = new Client(buildClientConfig(dbConfig));
 
   try {
     await client.connect();
@@ -365,7 +366,7 @@ export async function restoreDatabase({
     const dropSpinner = new Spinner('Recreating database...');
     dropSpinner.start();
 
-    const adminClient = new Client({ ...dbConfig, database: 'postgres' });
+    const adminClient = new Client(buildClientConfig(dbConfig, 'postgres'));
     try {
       await adminClient.connect();
     } catch (err) {
@@ -399,7 +400,7 @@ export async function restoreDatabase({
   const connectSpinner = new Spinner('Connecting...');
   connectSpinner.start();
 
-  const client = new Client(dbConfig);
+  const client = new Client(buildClientConfig(dbConfig));
   try {
     await client.connect();
   } catch (err) {
@@ -498,7 +499,7 @@ export async function verifyDatabase({
   const spinner = new Spinner('Connecting to database...');
   spinner.start();
 
-  const client = new Client(dbConfig);
+  const client = new Client(buildClientConfig(dbConfig));
 
   try {
     await client.connect();

@@ -100,6 +100,8 @@ program
   .description('Database management tools for VCKit')
   .version(pkg.version)
   .option('--dotenv <path>', 'Load environment variables from file')
+  .option('--no-ssl', 'Disable SSL for remote database connections')
+  .option('--ssl-reject-unauthorized', 'Reject unauthorized SSL certificates (default: true)', true)
   .configureOutput({
     outputError: (str) => {
       errorBox('ERROR', str.replace('error: ', ''));
@@ -194,6 +196,7 @@ ${colors.cyan('Examples:')}
   )
   .action(async (options) => {
     try {
+      const globalOpts = program.opts();
       await rotateEncryptionKey({
         oldKey: options.oldKey,
         newKey: options.newKey,
@@ -203,6 +206,11 @@ ${colors.cyan('Examples:')}
           database: options.database,
           user: options.user,
           password: options.password,
+          ssl: {
+            // Only explicitly disable if --no-ssl was passed, otherwise let auto-detection work
+            enabled: globalOpts.ssl === false ? false : undefined,
+            rejectUnauthorized: globalOpts.sslRejectUnauthorized,
+          },
         },
       });
 
@@ -249,6 +257,7 @@ ${colors.cyan('Examples:')}
   )
   .action(async (options) => {
     try {
+      const globalOpts = program.opts();
       await backupDatabase({
         output: options.output,
         container: options.container,
@@ -258,6 +267,10 @@ ${colors.cyan('Examples:')}
           database: options.database,
           user: options.user,
           password: options.password,
+          ssl: {
+            enabled: globalOpts.ssl === false ? false : undefined,
+            rejectUnauthorized: globalOpts.sslRejectUnauthorized,
+          },
         },
       });
     } catch (err) {
@@ -289,6 +302,7 @@ ${colors.cyan('Examples:')}
   )
   .action(async (options) => {
     try {
+      const globalOpts = program.opts();
       await restoreDatabase({
         input: options.input,
         container: options.container,
@@ -299,6 +313,10 @@ ${colors.cyan('Examples:')}
           database: options.database,
           user: options.user,
           password: options.password,
+          ssl: {
+            enabled: globalOpts.ssl === false ? false : undefined,
+            rejectUnauthorized: globalOpts.sslRejectUnauthorized,
+          },
         },
       });
     } catch (err) {
@@ -328,6 +346,7 @@ ${colors.cyan('Examples:')}
   )
   .action(async (options) => {
     try {
+      const globalOpts = program.opts();
       const result = await verifyDatabase({
         container: options.container,
         dbConfig: {
@@ -336,6 +355,10 @@ ${colors.cyan('Examples:')}
           database: options.database,
           user: options.user,
           password: options.password,
+          ssl: {
+            enabled: globalOpts.ssl === false ? false : undefined,
+            rejectUnauthorized: globalOpts.sslRejectUnauthorized,
+          },
         },
       });
       if (!result.valid) {
@@ -373,6 +396,7 @@ ${colors.cyan('Examples:')}
   )
   .action(async (options) => {
     try {
+      const globalOpts = program.opts();
       // Determine new password
       let newPassword = options.newPassword;
       if (options.generate) {
@@ -396,6 +420,10 @@ ${colors.cyan('Examples:')}
           database: options.database,
           user: options.user,
           password: options.password,
+          ssl: {
+            enabled: globalOpts.ssl === false ? false : undefined,
+            rejectUnauthorized: globalOpts.sslRejectUnauthorized,
+          },
         },
       });
 
