@@ -1,11 +1,11 @@
-const { backupDatabase, restoreDatabase, verifyDatabase } = require('../dist/backup-restore');
-const { Client } = require('pg');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+import { backupDatabase, restoreDatabase, verifyDatabase } from '../src/backup-restore';
+import { Client } from 'pg';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import type { DbConfig } from '../src/types';
 
-// Test database config
-const TEST_DB_CONFIG = {
+const TEST_DB_CONFIG: DbConfig = {
   host: process.env.DATABASE_HOST || 'localhost',
   port: parseInt(process.env.DATABASE_PORT || '5432'),
   database: process.env.DATABASE_NAME || 'vckit',
@@ -14,14 +14,13 @@ const TEST_DB_CONFIG = {
 };
 
 describe('backupDatabase', () => {
-  let tempDir;
+  let tempDir: string;
 
   beforeAll(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vckit-db-tools-test-'));
   });
 
   afterAll(() => {
-    // Clean up temp files
     if (tempDir && fs.existsSync(tempDir)) {
       fs.rmSync(tempDir, { recursive: true });
     }
@@ -44,7 +43,7 @@ describe('backupDatabase', () => {
   it('should create output directory if it does not exist', async () => {
     const nestedPath = path.join(tempDir, 'nested', 'dir', 'backup.sql');
 
-    const result = await backupDatabase({
+    await backupDatabase({
       output: nestedPath,
       dbConfig: TEST_DB_CONFIG,
     });
@@ -62,7 +61,6 @@ describe('backupDatabase', () => {
 
     const content = fs.readFileSync(outputPath, 'utf8');
 
-    // Should contain key tables
     expect(content).toContain('identifier');
     expect(content).toContain('private-key');
     expect(content).toContain('CREATE TABLE');
@@ -78,21 +76,18 @@ describe('backupDatabase', () => {
 
     const content = fs.readFileSync(outputPath, 'utf8');
 
-    // Should contain INSERT statements if there's data
-    // (This may not be true for empty databases)
     expect(content).toMatch(/INSERT INTO|-- VCKit Database Backup/);
   });
 });
 
 describe('restoreDatabase', () => {
-  let tempDir;
-  let backupPath;
+  let tempDir: string;
+  let backupPath: string;
 
   beforeAll(async () => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vckit-db-tools-restore-'));
     backupPath = path.join(tempDir, 'backup.sql');
 
-    // Create a backup first
     await backupDatabase({
       output: backupPath,
       dbConfig: TEST_DB_CONFIG,
@@ -125,14 +120,12 @@ describe('restoreDatabase', () => {
   });
 
   it('should restore tables correctly', async () => {
-    // Restore with drop to ensure clean slate
     await restoreDatabase({
       input: backupPath,
       drop: true,
       dbConfig: TEST_DB_CONFIG,
     });
 
-    // Verify tables exist
     const verifyResult = await verifyDatabase({
       dbConfig: TEST_DB_CONFIG,
     });
@@ -167,14 +160,13 @@ describe('verifyDatabase', () => {
 
     await client.end();
 
-    // Should have at least the core tables
-    const tables = tablesResult.rows.map(r => r.tablename);
+    const tables = tablesResult.rows.map((r: { tablename: string }) => r.tablename);
     expect(tables.length).toBeGreaterThan(0);
   });
 });
 
 describe('backup and restore round-trip', () => {
-  let tempDir;
+  let tempDir: string;
 
   beforeAll(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'vckit-roundtrip-'));
@@ -190,27 +182,23 @@ describe('backup and restore round-trip', () => {
     const client = new Client(TEST_DB_CONFIG);
     await client.connect();
 
-    // Get current identifier count
     const beforeResult = await client.query('SELECT COUNT(*) as count FROM identifier');
     const beforeCount = parseInt(beforeResult.rows[0].count);
 
     await client.end();
 
-    // Backup
     const backupPath = path.join(tempDir, 'roundtrip.sql');
     await backupDatabase({
       output: backupPath,
       dbConfig: TEST_DB_CONFIG,
     });
 
-    // Restore with drop
     await restoreDatabase({
       input: backupPath,
       drop: true,
       dbConfig: TEST_DB_CONFIG,
     });
 
-    // Verify count matches
     const client2 = new Client(TEST_DB_CONFIG);
     await client2.connect();
 

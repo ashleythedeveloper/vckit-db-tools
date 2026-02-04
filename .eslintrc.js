@@ -12,11 +12,12 @@ module.exports = {
   env: {
     node: true,
     es6: true,
+    jest: true,
   },
   rules: {
     '@typescript-eslint/no-explicit-any': 'warn',
     '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     '@typescript-eslint/no-var-requires': 'off',
   },
-  ignorePatterns: ['dist/', 'node_modules/', '__tests__/'],
+  ignorePatterns: ['dist/', 'node_modules/'],
 };

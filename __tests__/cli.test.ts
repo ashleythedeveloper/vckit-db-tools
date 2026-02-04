@@ -1,18 +1,38 @@
-const { execSync } = require('child_process');
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
+import { execSync, ExecSyncOptionsWithStringEncoding } from 'child_process';
+import * as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
 
 const CLI_PATH = path.join(__dirname, '../dist/cli.js');
 
-// Helper to strip ANSI codes for easier testing
-function stripAnsi(str) {
-  return str.replace(/\x1b\[[0-9;]*m/g, '').replace(/\x1b\[\?25[hl]/g, '').replace(/\x1b\[K/g, '');
+interface CliResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number;
+  raw: string;
+  output?: string;
 }
 
-// Helper to run CLI commands
-function runCli(args, env = {}) {
-  const fullEnv = {
+interface ExecError extends Error {
+  stdout?: string;
+  stderr?: string;
+  status?: number;
+}
+
+function stripAnsi(str: string): string {
+  return (
+    str
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x1b\[[0-9;]*m/g, '')
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x1b\[\?25[hl]/g, '')
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x1b\[K/g, '')
+  );
+}
+
+function runCli(args: string, env: Record<string, string> = {}): CliResult {
+  const fullEnv: Record<string, string | undefined> = {
     ...process.env,
     DATABASE_HOST: process.env.DATABASE_HOST || 'localhost',
     DATABASE_PORT: process.env.DATABASE_PORT || '5432',
@@ -22,20 +42,23 @@ function runCli(args, env = {}) {
     ...env,
   };
 
+  const execOptions: ExecSyncOptionsWithStringEncoding = {
+    env: fullEnv,
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+  };
+
   try {
-    const output = execSync(`node ${CLI_PATH} ${args}`, {
-      env: fullEnv,
-      encoding: 'utf8',
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
+    const output = execSync(`node ${CLI_PATH} ${args}`, execOptions);
     return { stdout: stripAnsi(output), stderr: '', exitCode: 0, raw: output };
   } catch (err) {
+    const error = err as ExecError;
     return {
-      stdout: stripAnsi(err.stdout || ''),
-      stderr: stripAnsi(err.stderr || ''),
-      output: stripAnsi((err.stdout || '') + (err.stderr || '')),
-      exitCode: err.status,
-      raw: (err.stdout || '') + (err.stderr || ''),
+      stdout: stripAnsi(error.stdout || ''),
+      stderr: stripAnsi(error.stderr || ''),
+      output: stripAnsi((error.stdout || '') + (error.stderr || '')),
+      exitCode: error.status ?? 1,
+      raw: (error.stdout || '') + (error.stderr || ''),
     };
   }
 }
@@ -62,14 +85,13 @@ describe('CLI', () => {
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toContain('KEY GENERATED');
 
-      // Extract the key from output (64 hex chars)
       const keyMatch = result.stdout.match(/([a-f0-9]{64})/i);
       expect(keyMatch).not.toBeNull();
     });
   });
 
   describe('backup', () => {
-    let tempDir;
+    let tempDir: string;
 
     beforeAll(() => {
       tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-backup-test-'));
@@ -84,7 +106,6 @@ describe('CLI', () => {
     it('should require --output option', () => {
       const result = runCli('backup');
       expect(result.exitCode).not.toBe(0);
-      // Commander error goes to stdout with custom errorOutput
       const output = result.stdout + result.stderr;
       expect(output.toLowerCase()).toMatch(/output|required/);
     });
@@ -93,7 +114,6 @@ describe('CLI', () => {
       const outputPath = path.join(tempDir, 'cli-backup.sql');
       const result = runCli(`backup --output ${outputPath}`);
 
-      // Skip if database connection fails
       if (result.exitCode !== 0) {
         const output = result.stdout + result.stderr;
         if (output.includes('password authentication failed') || output.includes('ECONNREFUSED')) {
@@ -165,8 +185,8 @@ describe('CLI', () => {
   });
 
   describe('--dotenv', () => {
-    let tempDir;
-    let envFilePath;
+    let tempDir: string;
+    let envFilePath: string;
 
     beforeAll(() => {
       tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-env-test-'));
@@ -187,43 +207,46 @@ describe('CLI', () => {
     });
 
     it('should load environment variables from file', () => {
-      // Create a test env file with valid connection info
-      fs.writeFileSync(envFilePath, `
+      fs.writeFileSync(
+        envFilePath,
+        `
 # Test environment file - uses same values as default
 DATABASE_HOST=localhost
 DATABASE_PORT=5432
 DATABASE_NAME=vckit
 DATABASE_USERNAME=postgres
 DATABASE_PASSWORD=postgres
-`);
+`
+      );
 
-      // Run verify with --dotenv - should succeed
       const result = runCli(`--dotenv ${envFilePath} verify`);
       const output = result.stdout + result.stderr;
 
-      // Should succeed in verifying (env file loaded correctly)
       expect(output).toContain('DATABASE VERIFICATION');
     });
 
     it('should handle quoted values in env file', () => {
-      // Create env file with quoted values that match working config
-      fs.writeFileSync(envFilePath, `
+      fs.writeFileSync(
+        envFilePath,
+        `
 DATABASE_HOST="localhost"
 DATABASE_PORT='5432'
 DATABASE_NAME="vckit"
 DATABASE_USERNAME='postgres'
 DATABASE_PASSWORD="postgres"
-`);
+`
+      );
 
       const result = runCli(`--dotenv ${envFilePath} verify`);
       const output = result.stdout + result.stderr;
 
-      // Should succeed - quotes should be stripped properly
       expect(output).toContain('DATABASE VERIFICATION');
     });
 
     it('should skip comments and empty lines', () => {
-      fs.writeFileSync(envFilePath, `
+      fs.writeFileSync(
+        envFilePath,
+        `
 # This is a comment
 DATABASE_HOST=localhost
 
@@ -233,12 +256,12 @@ DATABASE_PORT=5432
 DATABASE_NAME=vckit
 DATABASE_USERNAME=postgres
 DATABASE_PASSWORD=postgres
-`);
+`
+      );
 
       const result = runCli(`--dotenv ${envFilePath} verify`);
       const output = result.stdout + result.stderr;
 
-      // Should succeed - comments and empty lines handled
       expect(output).toContain('DATABASE VERIFICATION');
     });
   });

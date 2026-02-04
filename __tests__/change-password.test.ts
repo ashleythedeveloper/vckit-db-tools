@@ -1,8 +1,8 @@
-const { changePassword } = require('../dist/change-password');
-const { Client } = require('pg');
+import { Client } from 'pg';
+import { changePassword } from '../src/change-password';
+import type { DbConfig } from '../src/types';
 
-// Test database config
-const TEST_DB_CONFIG = {
+const TEST_DB_CONFIG: DbConfig = {
   host: process.env.DATABASE_HOST || 'localhost',
   port: parseInt(process.env.DATABASE_PORT || '5432'),
   database: process.env.DATABASE_NAME || 'vckit',
@@ -23,7 +23,7 @@ describe('changePassword', () => {
       await client.connect();
       await client.query(`ALTER USER ${TEST_DB_CONFIG.user} WITH PASSWORD '${originalPassword}'`);
       await client.end();
-    } catch (err) {
+    } catch {
       // Try with any changed password
       const passwords = ['TestPassword123!', 'AnotherTest456!'];
       for (const pwd of passwords) {
@@ -34,10 +34,12 @@ describe('changePassword', () => {
             database: 'postgres',
           });
           await client.connect();
-          await client.query(`ALTER USER ${TEST_DB_CONFIG.user} WITH PASSWORD '${originalPassword}'`);
+          await client.query(
+            `ALTER USER ${TEST_DB_CONFIG.user} WITH PASSWORD '${originalPassword}'`
+          );
           await client.end();
           break;
-        } catch (e) {
+        } catch {
           // Continue trying
         }
       }
@@ -74,7 +76,7 @@ describe('changePassword', () => {
   });
 
   it('should handle passwords with special characters', async () => {
-    const newPassword = "Test'Password\"123!@#$%";
+    const newPassword = 'Test\'Password"123!@#$%';
 
     const result = await changePassword({
       newPassword: newPassword,

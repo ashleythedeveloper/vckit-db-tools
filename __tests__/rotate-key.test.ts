@@ -1,5 +1,5 @@
-const { SecretBox, generateKey, generatePassword, rotateEncryptionKey } = require('../dist/rotate-key');
-const { Client } = require('pg');
+import { Client } from 'pg';
+import { SecretBox, generateKey, generatePassword, rotateEncryptionKey } from '../src/rotate-key';
 
 // Test database config - uses environment variables or defaults
 const TEST_DB_CONFIG = {
@@ -76,7 +76,7 @@ describe('generateKey', () => {
   });
 
   it('should generate unique keys', () => {
-    const keys = new Set();
+    const keys = new Set<string>();
     for (let i = 0; i < 100; i++) {
       keys.add(generateKey());
     }
@@ -98,7 +98,7 @@ describe('generatePassword', () => {
   });
 
   it('should generate unique passwords', () => {
-    const passwords = new Set();
+    const passwords = new Set<string>();
     for (let i = 0; i < 100; i++) {
       passwords.add(generatePassword());
     }
@@ -114,7 +114,7 @@ describe('generatePassword', () => {
 });
 
 describe('rotateEncryptionKey', () => {
-  let client;
+  let client: Client | null = null;
   const oldKey = '29739248cad1bd1a0fc4d9b75cd4d2990de535baf5caadfdf8d8f86664aa830c';
   const newKey = generateKey();
 
@@ -122,7 +122,7 @@ describe('rotateEncryptionKey', () => {
     client = new Client(TEST_DB_CONFIG);
     try {
       await client.connect();
-    } catch (err) {
+    } catch {
       console.warn('Database not available, skipping integration tests');
     }
   });
@@ -155,7 +155,7 @@ describe('rotateEncryptionKey', () => {
 
   it('should rotate keys successfully', async () => {
     // Skip if no database connection
-    if (!client || client._ending) {
+    if (!client || (client as Client & { _ending?: boolean })._ending) {
       console.warn('Skipping: database not available');
       return;
     }
