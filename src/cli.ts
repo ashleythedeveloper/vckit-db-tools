@@ -49,8 +49,13 @@ function loadEnvFile(filePath: string): void {
 
 /**
  * Update a value in an env file
+ * Returns 'updated' if key was found and updated, 'appended' if key was added, or false if file not found
  */
-function updateEnvFile(filePath: string, key: string, newValue: string): boolean {
+function updateEnvFile(
+  filePath: string,
+  key: string,
+  newValue: string
+): 'updated' | 'appended' | false {
   const absolutePath = path.resolve(filePath);
   if (!fs.existsSync(absolutePath)) {
     return false;
@@ -82,7 +87,7 @@ function updateEnvFile(filePath: string, key: string, newValue: string): boolean
   }
 
   fs.writeFileSync(absolutePath, updatedLines.join('\n'));
-  return true;
+  return found ? 'updated' : 'appended';
 }
 
 // Pre-parse --dotenv
@@ -210,15 +215,28 @@ ${colors.cyan('Examples:')}
         const envFile = program.opts().dotenv;
         if (!envFile) {
           console.log(`${colors.yellow('⚠')} --update-env requires --dotenv to be specified`);
-        } else if (updateEnvFile(envFile, 'DATABASE_ENCRYPTION_KEY', options.newKey)) {
-          spacer();
-          console.log(
-            `${colors.green('✔')} Updated ${colors.cyan('DATABASE_ENCRYPTION_KEY')} in ${colors.cyan(envFile)}`
-          );
         } else {
-          console.log(
-            `${colors.yellow('⚠')} Could not update ${colors.cyan(envFile)} - file not found`
-          );
+          const result = updateEnvFile(envFile, 'DATABASE_ENCRYPTION_KEY', options.newKey);
+          spacer();
+          if (result === 'updated') {
+            console.log(
+              `${colors.green('✔')} Updated ${colors.cyan('DATABASE_ENCRYPTION_KEY')} in ${colors.cyan(envFile)}`
+            );
+          } else if (result === 'appended') {
+            console.log(
+              `${colors.yellow('⚠')} ${colors.cyan('DATABASE_ENCRYPTION_KEY')} was not found in ${colors.cyan(envFile)}`
+            );
+            console.log(
+              `${colors.yellow('⚠')} Added ${colors.cyan('DATABASE_ENCRYPTION_KEY')} to end of file`
+            );
+            console.log(
+              `${colors.yellow('⚠')} If your app uses a different variable name, update it manually`
+            );
+          } else {
+            console.log(
+              `${colors.yellow('⚠')} Could not update ${colors.cyan(envFile)} - file not found`
+            );
+          }
         }
       }
     } catch (err) {
@@ -403,15 +421,28 @@ ${colors.cyan('Examples:')}
         const envFile = program.opts().dotenv;
         if (!envFile) {
           console.log(`${colors.yellow('⚠')} --update-env requires --dotenv to be specified`);
-        } else if (updateEnvFile(envFile, 'DATABASE_PASSWORD', newPassword)) {
-          spacer();
-          console.log(
-            `${colors.green('✔')} Updated ${colors.cyan('DATABASE_PASSWORD')} in ${colors.cyan(envFile)}`
-          );
         } else {
-          console.log(
-            `${colors.yellow('⚠')} Could not update ${colors.cyan(envFile)} - file not found`
-          );
+          const result = updateEnvFile(envFile, 'DATABASE_PASSWORD', newPassword);
+          spacer();
+          if (result === 'updated') {
+            console.log(
+              `${colors.green('✔')} Updated ${colors.cyan('DATABASE_PASSWORD')} in ${colors.cyan(envFile)}`
+            );
+          } else if (result === 'appended') {
+            console.log(
+              `${colors.yellow('⚠')} ${colors.cyan('DATABASE_PASSWORD')} was not found in ${colors.cyan(envFile)}`
+            );
+            console.log(
+              `${colors.yellow('⚠')} Added ${colors.cyan('DATABASE_PASSWORD')} to end of file`
+            );
+            console.log(
+              `${colors.yellow('⚠')} If your app uses a different variable name, update it manually`
+            );
+          } else {
+            console.log(
+              `${colors.yellow('⚠')} Could not update ${colors.cyan(envFile)} - file not found`
+            );
+          }
         }
       }
     } catch (err) {

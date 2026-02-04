@@ -265,4 +265,275 @@ DATABASE_PASSWORD=postgres
       expect(output).toContain('DATABASE VERIFICATION');
     });
   });
+
+  describe('--update-env', () => {
+    let tempDir: string;
+    let envFilePath: string;
+
+    beforeEach(() => {
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cli-update-env-test-'));
+      envFilePath = path.join(tempDir, 'test.env');
+    });
+
+    afterEach(() => {
+      if (tempDir && fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true });
+      }
+    });
+
+    describe('rotate-key --update-env', () => {
+      // Use the actual test database encryption key from fixtures/schema.sql
+      const oldKey = '29739248cad1bd1a0fc4d9b75cd4d2990de535baf5caadfdf8d8f86664aa830c';
+      const newKey = '39739248cad1bd1a0fc4d9b75cd4d2990de535baf5caadfdf8d8f86664aa830c';
+
+      // Helper to rotate keys back to original state
+      const rotateBack = () => {
+        runCli(`rotate-key --old-key ${newKey} --new-key ${oldKey}`);
+      };
+
+      it('should require --dotenv when using --update-env', () => {
+        // This test needs rotation to succeed first, then check for warning
+        const result = runCli(`rotate-key --old-key ${oldKey} --new-key ${newKey} --update-env`);
+        const output = result.stdout + result.stderr;
+
+        if (output.includes('password authentication failed') || output.includes('ECONNREFUSED')) {
+          console.warn('Skipping: database connection failed');
+          return;
+        }
+
+        // If rotation succeeded, we should see the warning about --dotenv
+        if (output.includes('ROTATION COMPLETE') && output.includes('Successful: 1')) {
+          expect(output).toContain('--update-env requires --dotenv');
+          rotateBack();
+        } else if (output.includes('Decryption failed')) {
+          // Rotation failed due to wrong key - test cannot verify --update-env warning
+          console.warn('Skipping: rotation failed (key mismatch with database)');
+        }
+      });
+
+      it('should update existing DATABASE_ENCRYPTION_KEY', () => {
+        fs.writeFileSync(
+          envFilePath,
+          `DATABASE_HOST=localhost
+DATABASE_ENCRYPTION_KEY=${oldKey}
+DATABASE_PASSWORD=postgres
+`
+        );
+
+        const result = runCli(
+          `--dotenv ${envFilePath} rotate-key --old-key ${oldKey} --new-key ${newKey} --update-env`
+        );
+        const output = result.stdout + result.stderr;
+
+        if (output.includes('password authentication failed') || output.includes('ECONNREFUSED')) {
+          console.warn('Skipping: database connection failed');
+          return;
+        }
+
+        if (output.includes('Decryption failed')) {
+          console.warn('Skipping: rotation failed (key mismatch with database)');
+          return;
+        }
+
+        // Should show success, not warning
+        expect(output).toContain('Updated');
+        expect(output).toContain('DATABASE_ENCRYPTION_KEY');
+        expect(output).not.toContain('was not found');
+
+        // Verify file was updated
+        const content = fs.readFileSync(envFilePath, 'utf8');
+        expect(content).toContain(`DATABASE_ENCRYPTION_KEY=${newKey}`);
+        expect(content).not.toContain(oldKey);
+
+        rotateBack();
+      });
+
+      it('should warn when DATABASE_ENCRYPTION_KEY is not found and append it', () => {
+        fs.writeFileSync(
+          envFilePath,
+          `DATABASE_HOST=localhost
+DB_ENCRYPTION_KEY=someothervalue
+DATABASE_PASSWORD=postgres
+`
+        );
+
+        const result = runCli(
+          `--dotenv ${envFilePath} rotate-key --old-key ${oldKey} --new-key ${newKey} --update-env`
+        );
+        const output = result.stdout + result.stderr;
+
+        if (output.includes('password authentication failed') || output.includes('ECONNREFUSED')) {
+          console.warn('Skipping: database connection failed');
+          return;
+        }
+
+        if (output.includes('Decryption failed')) {
+          console.warn('Skipping: rotation failed (key mismatch with database)');
+          return;
+        }
+
+        // Should show warning about key not found
+        expect(output).toContain('DATABASE_ENCRYPTION_KEY');
+        expect(output).toContain('was not found');
+        expect(output).toContain('Added');
+        expect(output).toContain('different variable name');
+
+        // Verify original key is preserved and new one appended
+        const content = fs.readFileSync(envFilePath, 'utf8');
+        expect(content).toContain('DB_ENCRYPTION_KEY=someothervalue'); // Original preserved
+        expect(content).toContain(`DATABASE_ENCRYPTION_KEY=${newKey}`); // New appended
+
+        rotateBack();
+      });
+
+      it('should preserve quote style when updating', () => {
+        fs.writeFileSync(
+          envFilePath,
+          `DATABASE_HOST=localhost
+DATABASE_ENCRYPTION_KEY="${oldKey}"
+DATABASE_PASSWORD=postgres
+`
+        );
+
+        const result = runCli(
+          `--dotenv ${envFilePath} rotate-key --old-key ${oldKey} --new-key ${newKey} --update-env`
+        );
+        const output = result.stdout + result.stderr;
+
+        if (output.includes('password authentication failed') || output.includes('ECONNREFUSED')) {
+          console.warn('Skipping: database connection failed');
+          return;
+        }
+
+        if (output.includes('Decryption failed')) {
+          console.warn('Skipping: rotation failed (key mismatch with database)');
+          return;
+        }
+
+        // Verify quotes are preserved
+        const content = fs.readFileSync(envFilePath, 'utf8');
+        expect(content).toContain(`DATABASE_ENCRYPTION_KEY="${newKey}"`);
+
+        rotateBack();
+      });
+    });
+
+    describe('change-password --update-env', () => {
+      it('should require --dotenv when using --update-env', () => {
+        // This test needs password change to succeed first, then check for warning
+        // We provide the current password via --password option
+        const result = runCli(
+          'change-password --new-password testpass123 --password postgres --update-env'
+        );
+        const output = result.stdout + result.stderr;
+
+        if (output.includes('password authentication failed') || output.includes('ECONNREFUSED')) {
+          console.warn('Skipping: database connection failed');
+          return;
+        }
+
+        // If password change succeeded, we should see the warning about --dotenv
+        if (output.includes('PASSWORD CHANGED')) {
+          expect(output).toContain('--update-env requires --dotenv');
+          // Revert the password change
+          runCli('change-password --new-password postgres --password testpass123');
+        }
+      });
+
+      it('should update existing DATABASE_PASSWORD', () => {
+        // Use postgres as current password, change to testpass, then revert
+        fs.writeFileSync(
+          envFilePath,
+          `DATABASE_HOST=localhost
+DATABASE_PASSWORD=postgres
+DATABASE_USERNAME=postgres
+`
+        );
+
+        const result = runCli(
+          `--dotenv ${envFilePath} change-password --new-password testpass123 --update-env`
+        );
+        const output = result.stdout + result.stderr;
+
+        if (output.includes('password authentication failed') || output.includes('ECONNREFUSED')) {
+          console.warn('Skipping: database connection failed');
+          return;
+        }
+
+        expect(output).toContain('Updated');
+        expect(output).toContain('DATABASE_PASSWORD');
+        expect(output).not.toContain('was not found');
+
+        // Verify file was updated
+        const content = fs.readFileSync(envFilePath, 'utf8');
+        expect(content).toContain('DATABASE_PASSWORD=testpass123');
+        expect(content).not.toContain('DATABASE_PASSWORD=postgres');
+
+        // Revert password
+        runCli('change-password --new-password postgres --password testpass123');
+      });
+
+      it('should warn when DATABASE_PASSWORD is not found and append it', () => {
+        // Use different var name to trigger warning
+        fs.writeFileSync(
+          envFilePath,
+          `DATABASE_HOST=localhost
+DB_PASSWORD=postgres
+DATABASE_USERNAME=postgres
+`
+        );
+
+        const result = runCli(
+          `--dotenv ${envFilePath} change-password --new-password testpass456 --password postgres --update-env`
+        );
+        const output = result.stdout + result.stderr;
+
+        if (output.includes('password authentication failed') || output.includes('ECONNREFUSED')) {
+          console.warn('Skipping: database connection failed');
+          return;
+        }
+
+        // Should show warning about key not found
+        expect(output).toContain('DATABASE_PASSWORD');
+        expect(output).toContain('was not found');
+        expect(output).toContain('Added');
+        expect(output).toContain('different variable name');
+
+        // Verify original key is preserved and new one appended
+        const content = fs.readFileSync(envFilePath, 'utf8');
+        expect(content).toContain('DB_PASSWORD=postgres'); // Original preserved
+        expect(content).toContain('DATABASE_PASSWORD=testpass456'); // New appended
+
+        // Revert password
+        runCli('change-password --new-password postgres --password testpass456');
+      });
+
+      it('should preserve single quote style when updating', () => {
+        fs.writeFileSync(
+          envFilePath,
+          `DATABASE_HOST=localhost
+DATABASE_PASSWORD='postgres'
+DATABASE_USERNAME=postgres
+`
+        );
+
+        const result = runCli(
+          `--dotenv ${envFilePath} change-password --new-password testpass789 --update-env`
+        );
+        const output = result.stdout + result.stderr;
+
+        if (output.includes('password authentication failed') || output.includes('ECONNREFUSED')) {
+          console.warn('Skipping: database connection failed');
+          return;
+        }
+
+        // Verify quotes are preserved
+        const content = fs.readFileSync(envFilePath, 'utf8');
+        expect(content).toContain("DATABASE_PASSWORD='testpass789'");
+
+        // Revert password
+        runCli('change-password --new-password postgres --password testpass789');
+      });
+    });
+  });
 });
