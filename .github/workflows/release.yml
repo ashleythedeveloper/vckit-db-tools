@@ -55,6 +55,9 @@ jobs:
       - name: Test
         run: yarn test
 
+      - name: Update npm
+        run: npm install -g npm@latest
+
       - name: Publish to npm
         run: npm publish --access public
 
