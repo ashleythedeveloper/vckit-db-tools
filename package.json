@@ -1,6 +1,6 @@
 {
   "name": "vckit-db-tools",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Database management tools for VCKit - backup, restore, and key rotation",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
