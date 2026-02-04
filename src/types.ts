@@ -1,4 +1,12 @@
 /**
+ * SSL configuration options
+ */
+export interface SslConfig {
+  enabled?: boolean;
+  rejectUnauthorized?: boolean;
+}
+
+/**
  * Database configuration options
  */
 export interface DbConfig {
@@ -7,6 +15,7 @@ export interface DbConfig {
   database: string;
   user: string;
   password?: string;
+  ssl?: SslConfig;
 }
 
 /**

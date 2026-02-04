@@ -7,12 +7,16 @@ export { backupDatabase, restoreDatabase, verifyDatabase } from './backup-restor
 // Password management
 export { changePassword } from './change-password';
 
+// Database utilities
+export { buildClientConfig, isLocalHost } from './db-utils';
+
 // UI utilities
 export * from './ui';
 
 // Types
 export type {
   DbConfig,
+  SslConfig,
   RotateKeyOptions,
   RotateKeyResult,
   BackupOptions,

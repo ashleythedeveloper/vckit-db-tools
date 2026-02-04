@@ -3,6 +3,7 @@ import { promisify } from 'util';
 import { Client } from 'pg';
 import type { ChangePasswordOptions, ChangePasswordResult } from './types';
 import { colors, Spinner, status, resultBox, nextSteps, operationBanner, spacer } from './ui';
+import { buildClientConfig } from './db-utils';
 
 const execAsync = promisify(exec);
 
@@ -45,10 +46,7 @@ export async function changePassword({
     );
     spinner.start();
 
-    const client = new Client({
-      ...dbConfig,
-      database: 'postgres',
-    });
+    const client = new Client(buildClientConfig(dbConfig, 'postgres'));
 
     try {
       await client.connect();
