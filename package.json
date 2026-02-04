@@ -1,0 +1,80 @@
+{
+  "name": "vckit-db-tools",
+  "version": "1.0.0",
+  "description": "Database management tools for VCKit - backup, restore, and key rotation",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "vckit-db": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "clean": "rm -rf dist",
+    "prebuild": "yarn clean",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watch --runInBand",
+    "test:coverage": "jest --coverage --runInBand",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "prepublishOnly": "yarn build",
+    "prepare": "husky"
+  },
+  "keywords": [
+    "vckit",
+    "database",
+    "backup",
+    "restore",
+    "encryption",
+    "key-rotation",
+    "veramo"
+  ],
+  "author": "Ashley Harwood <ashley.harwood.au@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ashleythedeveloper/vckit-db-tools.git"
+  },
+  "homepage": "https://github.com/ashleythedeveloper/vckit-db-tools#readme",
+  "bugs": {
+    "url": "https://github.com/ashleythedeveloper/vckit-db-tools/issues"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "commander": "^12.0.0",
+    "pg": "^8.11.0",
+    "tweetnacl": "^1.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.11.0",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "husky": "^9.0.0",
+    "jest": "^29.7.0",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.2.0",
+    "typescript": "^5.4.0"
+  },
+  "lint-staged": {
+    "src/**/*.ts": [
+      "prettier --write",
+      "eslint"
+    ]
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": ["**/__tests__/**/*.test.js"],
+    "collectCoverageFrom": ["dist/**/*.js"],
+    "coverageDirectory": "coverage",
+    "verbose": true,
+    "globalSetup": "./__tests__/setup.js",
+    "globalTeardown": "./__tests__/setup.js",
+    "testSequencer": "./__tests__/sequencer.js"
+  }
+}
