@@ -5,6 +5,22 @@
  * animated spinners, and box-framed outputs.
  */
 
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Read version from package.json
+function getVersion(): string {
+  try {
+    const pkgPath = path.join(__dirname, '..', 'package.json');
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+    return pkg.version || '0.0.0';
+  } catch {
+    return '0.0.0';
+  }
+}
+
+const VERSION = getVersion();
+
 // ANSI color codes
 const RESET = '\x1b[0m';
 const BOLD = '\x1b[1m';
@@ -71,7 +87,7 @@ ${logoLine(' ' + colors.cyan('╚██╗ ██╔╝██║     ██╔�
 ${logoLine(' ' + colors.cyan(' ╚████╔╝ ╚██████╗██║  ██╗██║   ██║') + '     ' + colors.magenta('██████╔╝██████╔╝'), W)}
 ${logoLine(' ' + colors.cyan('  ╚═══╝   ╚═════╝╚═╝  ╚═╝╚═╝   ╚═╝') + '     ' + colors.magenta('╚═════╝ ╚═════╝') + ' ', W)}
 ${colors.cyan('╠')}${hr}${colors.cyan('╣')}
-${logoLine('  ' + colors.gray('Database Management Tools') + '                     ' + colors.magenta('v1.0.0') + ' ', W)}
+${logoLine('  ' + colors.gray('Database Management Tools') + '                     ' + colors.magenta('v' + VERSION) + ' ', W)}
 ${colors.cyan('╚')}${hr}${colors.cyan('╝')}`;
 }
 
