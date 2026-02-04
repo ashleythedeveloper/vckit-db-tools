@@ -2,15 +2,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import { Client } from 'pg';
 import type { ChangePasswordOptions, ChangePasswordResult } from './types';
-import {
-  colors,
-  Spinner,
-  status,
-  resultBox,
-  nextSteps,
-  operationBanner,
-  spacer,
-} from './ui';
+import { colors, Spinner, status, resultBox, nextSteps, operationBanner, spacer } from './ui';
 
 const execAsync = promisify(exec);
 
@@ -48,7 +40,9 @@ export async function changePassword({
       throw new Error(`Password change failed: ${(err as Error).message}`);
     }
   } else {
-    const spinner = new Spinner(`Connecting to ${colors.cyan(dbConfig.host)}:${colors.cyan(String(dbConfig.port))}...`);
+    const spinner = new Spinner(
+      `Connecting to ${colors.cyan(dbConfig.host)}:${colors.cyan(String(dbConfig.port))}...`
+    );
     spinner.start();
 
     const client = new Client({
